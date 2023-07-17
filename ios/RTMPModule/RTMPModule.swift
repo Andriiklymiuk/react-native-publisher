@@ -27,7 +27,12 @@ class RTMPModule: NSObject {
             return
         }
         let audioBitrate = videoSettingsDict["audioBitrate"] as? Int ?? 128000
-        let videoSettings = VideoSettingsType(width: width, height: height, bitrate: bitrate, audioBitrate: audioBitrate)
+        let videoSettings = VideoSettingsType(
+            width: Int32(width),
+            height: Int32(height),
+            bitrate: UInt32(bitrate),
+            audioBitrate: audioBitrate
+        )
         
         resolve(RTMPCreator.setVideoSettings(videoSettings))
     }
@@ -40,21 +45,20 @@ class RTMPModule: NSObject {
 
     @objc
     func mute(_ resolve: (RCTPromiseResolveBlock), reject: (RCTPromiseRejectBlock)){
-        RTMPCreator.stream.audioSettings[.muted] = true
+        RTMPCreator.stream.hasAudio = false
     }
 
     @objc
     func unmute(_ resolve: (RCTPromiseResolveBlock), reject: (RCTPromiseRejectBlock)){
-        RTMPCreator.stream.audioSettings[.muted] = false
+        RTMPCreator.stream.hasAudio = false
     }
 
     @objc
     func switchCamera(_ resolve: (RCTPromiseResolveBlock), reject: (RCTPromiseRejectBlock)){
         RTMPCreator.cameraPosition = RTMPCreator.cameraPosition == .back ? .front : .back
         
-        RTMPCreator.stream.captureSettings = [
-            .isVideoMirrored: RTMPCreator.cameraPosition == .back ? false : true
-        ]
+        RTMPCreator.stream.videoCapture(for: 0)?
+            .isVideoMirrored = RTMPCreator.cameraPosition == .back ? false : true
         RTMPCreator.stream.attachCamera(
             AVCaptureDevice.default(
                 .builtInWideAngleCamera,
@@ -70,7 +74,7 @@ class RTMPModule: NSObject {
 
     @objc
     func isMuted(_ resolve: (RCTPromiseResolveBlock), reject: (RCTPromiseRejectBlock)){
-        resolve(RTMPCreator.stream.audioSettings[.muted])
+        resolve(RTMPCreator.stream.hasAudio)
     }
 
     @objc

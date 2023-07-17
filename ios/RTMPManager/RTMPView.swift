@@ -45,7 +45,13 @@ class RTMPView: UIView {
         let bitrate: Int = videoSettings["bitrate"] as? Int ?? (3000 * 1000)
         let audioBitrate: Int = videoSettings["audioBitrate"] as? Int ?? (192 * 1000)
         
-        RTMPCreator.setVideoSettings(VideoSettingsType(width: width, height: height, bitrate: bitrate, audioBitrate: audioBitrate)
+        RTMPCreator.setVideoSettings(
+            VideoSettingsType(
+                width: Int32(width),
+                height: Int32(height),
+                bitrate: UInt32(bitrate),
+                audioBitrate: audioBitrate
+            )
         )
     }
   }
@@ -81,25 +87,31 @@ class RTMPView: UIView {
     hkView.videoGravity = .resizeAspectFill
     RTMPCreator.stream.videoOrientation = RTMPCreator.videoOrientation
       
-    RTMPCreator.stream.audioSettings = [
-        .bitrate: RTMPCreator.videoSettings.audioBitrate
-    ]
-      
-    RTMPCreator.stream.captureSettings = [
-      .fps: 30,
-      .sessionPreset: AVCaptureSession.Preset.hd1920x1080,
-      .continuousAutofocus: true,
-      .continuousExposure: true,
-      .isVideoMirrored: false
-    ]
+    RTMPCreator.stream.frameRate = 30
+    RTMPCreator.stream.sessionPreset = AVCaptureSession.Preset.hd1920x1080
 
-    RTMPCreator.stream.videoSettings = [
-      .width: RTMPCreator.videoSettings.width,
-      .height: RTMPCreator.videoSettings.height,
-      .bitrate: RTMPCreator.videoSettings.bitrate,
-      .scalingMode: ScalingMode.cropSourceToCleanAperture,
-      .profileLevel: kVTProfileLevel_H264_High_AutoLevel
-    ]
+    RTMPCreator.stream.audioSettings = AudioCodecSettings(
+        bitRate: RTMPCreator.videoSettings.audioBitrate
+    )
+
+    RTMPCreator.stream.frameRate = 30
+    RTMPCreator.stream.sessionPreset = AVCaptureSession.Preset.hd1920x1080
+
+    // It provides strange behavior if auto enabled, but can be useful to test
+    // RTMPCreator.stream.videoCapture(for: 0).preferredVideoStabilizationMode = .auto
+
+    RTMPCreator.stream.videoCapture(for: 0)?.isVideoMirrored = false
+
+    RTMPCreator.stream.videoSettings = VideoCodecSettings(
+        videoSize: .init(width: RTMPCreator.videoSettings.width, height: RTMPCreator.videoSettings.height),
+        profileLevel: kVTProfileLevel_H264_High_AutoLevel as String,
+        bitRate: RTMPCreator.videoSettings.bitrate,
+        maxKeyFrameIntervalDuration: 2,
+        scalingMode: .cropSourceToCleanAperture,
+        bitRateMode: .average,
+        allowFrameReordering: nil,
+        isHardwareEncoderEnabled: true
+    )
 
     RTMPCreator.stream.attachAudio(AVCaptureDevice.default(for: .audio))
     RTMPCreator.stream.attachCamera(AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back))
@@ -225,11 +237,11 @@ class RTMPView: UIView {
         let audioBitrate = RTMPCreator.videoSettings.audioBitrate
 
         if orientation == .portrait || orientation == .portraitUpsideDown {
-            width = RTMPCreator.videoSettings.width
-            height = RTMPCreator.videoSettings.height
+            width = Int(RTMPCreator.videoSettings.width)
+            height = Int(RTMPCreator.videoSettings.height)
         } else {
-            width = RTMPCreator.videoSettings.height
-            height = RTMPCreator.videoSettings.width
+            width = Int(RTMPCreator.videoSettings.height)
+            height = Int(RTMPCreator.videoSettings.width)
         }
 
         videoSettings = NSDictionary(

@@ -9,9 +9,9 @@ import AVFoundation
 import VideoToolbox
 
 struct VideoSettingsType {
-    var width: Int
-    var height: Int
-    var bitrate: Int
+    var width: Int32
+    var height: Int32
+    var bitrate: UInt32
     var audioBitrate: Int
 }
 
@@ -68,17 +68,20 @@ class RTMPCreator {
         videoSettings = newVideoSettings
         let width = videoOrientation.isPortrait ? videoSettings.width : videoSettings.height
         let height = videoOrientation.isPortrait ? videoSettings.height : videoSettings.width
-        stream.videoSettings = [
-            .width: width,
-            .height: height,
-            .bitrate: videoSettings.bitrate,
-            .scalingMode: ScalingMode.cropSourceToCleanAperture,
-            .profileLevel: kVTProfileLevel_H264_High_AutoLevel
-        ]
-
-        RTMPCreator.stream.audioSettings = [
-            .bitrate: videoSettings.audioBitrate
-        ]
+        stream.videoSettings = VideoCodecSettings(
+            videoSize: .init(width: width, height: height),
+            profileLevel: kVTProfileLevel_H264_High_AutoLevel as String,
+            bitRate: videoSettings.bitrate,
+            maxKeyFrameIntervalDuration: 2,
+            scalingMode: .cropSourceToCleanAperture,
+            bitRateMode: .average,
+            allowFrameReordering: nil,
+            isHardwareEncoderEnabled: true
+        )
+        
+        stream.audioSettings = AudioCodecSettings(
+          bitRate: videoSettings.audioBitrate
+        )
     }
   
     public static func stopPublish(){

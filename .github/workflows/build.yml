@@ -44,6 +44,17 @@ jobs:
         with:
           version: latest
 
+      - name: Cache node modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: pnpm install
+
       - name: Cache Gradle
         uses: actions/cache@v3
         with:
@@ -66,12 +77,22 @@ jobs:
         with:
           version: latest
 
-      - name: Cache CocoaPods
+      - name: Cache node modules
+        id: cache-node-modules
         uses: actions/cache@v3
         with:
-          path: example/ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: pnpm install
+
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
+
+      - name: Install Pods
+        run: cd example/ios && pod install
 
       - name: Building iOS
-        run: |
-          cd example/ios && xcodebuild -quiet -workspace RtmpExample.xcworkspace -scheme RtmpExample -destination generic/platform=iOS CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO build
+        run: cd example/ios && xcodebuild -quiet -workspace RtmpExample.xcworkspace -scheme RtmpExample -destination generic/platform=iOS CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO build

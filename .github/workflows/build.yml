@@ -30,7 +30,9 @@ jobs:
         run: pnpm install
 
       - name: Building the package
-        run: pnpm pack
+        run: |
+          pnpm prepare
+          pnpm build
 
   build_android:
     needs: build_dependency

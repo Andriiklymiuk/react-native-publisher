@@ -13,39 +13,25 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Caching node_modules
-        id: cache-npm
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.0.1
         with:
-          path: ./node_modules
-          key: rtmp-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          version: latest
 
-      - name: Caching Pods
-        id: cache-pods
+      - name: Cache node modules
+        id: cache-node-modules
         uses: actions/cache@v3
-        env:
-          cache-name: cache-cocoapods
         with:
-          path: ./example/ios/Pods
-          key: rtmp-build-${{ env.cache-name }}-${{ hashFiles('./example/ios/Podfile.lock') }}
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
-        run: |
-          yarn
-      - name: Lint files
-        run: |
-          yarn lint
-      - name: Typescript checking
-        run: |
-          yarn typescript
-      - name: Unit tests
-        run: |
-          yarn test --coverage --updateSnapshot --verbose
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: pnpm install
+
       - name: Building the package
-        run: |
-          yarn prepare
+        run: pnpm pack
+
   build_android:
     needs: build_dependency
     runs-on: ubuntu-latest
@@ -53,34 +39,21 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Caching node_modules
-        id: cache-npm
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.0.1
         with:
-          path: ./node_modules
-          key: rtmp-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          version: latest
 
-      - name: Install dependencies
-        run: |
-          yarn
-      - name: Caching Gradle
-        id: cache-gradle
+      - name: Cache Gradle
         uses: actions/cache@v3
-        env:
-          cache-name: cache-gradle-files
         with:
-          path: ./example/android/.gradle
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('./example/android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-      - name: Install dependencies
-        run: |
-          yarn
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+
       - name: Building Android
         run: |
           cd example/android && ./gradlew build
+
   build_ios:
     needs: build_dependency
     runs-on: macos-latest
@@ -88,27 +61,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Caching node_modules
-        id: cache-npm
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.0.1
         with:
-          path: ./node_modules
-          key: rtmp-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          version: latest
 
-      - name: Caching Pods
-        id: cache-pods
+      - name: Cache CocoaPods
         uses: actions/cache@v3
-        env:
-          cache-name: cache-cocoapods
         with:
-          path: ./example/ios/Pods
-          key: rtmp-build-${{ env.cache-name }}-${{ hashFiles('./example/ios/Podfile.lock') }}
+          path: example/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
 
-      - name: Install dependencies
-        run: |
-          yarn
       - name: Building iOS
         run: |
           cd example/ios && xcodebuild -quiet -workspace RtmpExample.xcworkspace -scheme RtmpExample -destination generic/platform=iOS CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO build
